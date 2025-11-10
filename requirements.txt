@@ -1,0 +1,58 @@
+# RegNet-SAM 项目依赖包
+# Python >= 3.8
+#
+# 注意：
+# 1. PyTorch 相关包（torch, torchvision, torchaudio）请通过 conda 安装
+# 2. MMDetection 系列包（mmengine, mmdet, mmcv）请通过 mim 安装：
+#    pip install -U openmim
+#    mim install mmengine
+#    mim install "mmdet>=3.0.0"
+#
+# 以下仅列出通过 pip 安装的依赖包
+
+# 科学计算和数据处理
+numpy>=1.19.0
+scipy>=1.5.0
+pillow>=8.0.0
+opencv-python>=4.5.0
+
+# 深度学习框架（通过 conda 安装，这里仅作记录）
+# torch>=1.10.0
+# torchvision>=0.11.0
+# torchaudio>=0.10.0
+
+# 配置和日志
+pyyaml>=5.4.0
+tqdm>=4.60.0
+colorama>=0.4.4
+
+# 图像处理
+matplotlib>=3.3.0
+scikit-image>=0.18.0
+
+# 数据加载和增强
+pycocotools>=2.0.4
+albumentations>=1.1.0
+
+# 工具库
+einops>=0.3.0
+timm>=0.6.0
+
+# 可视化和调试
+tensorboard>=2.7.0
+wandb>=0.12.0
+
+# 模型分析
+fvcore>=0.1.5
+iopath>=0.1.7
+
+# 其他工具
+pyyaml>=5.4.0
+addict>=2.4.0
+yapf>=0.40.0
+isort>=5.9.0
+
+# 可选：用于 NPU 部署相关
+onnx>=1.11.0
+onnxruntime>=1.11.0
+
