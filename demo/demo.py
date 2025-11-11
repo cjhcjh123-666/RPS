@@ -117,6 +117,19 @@ def parse_args():
         default='none',
         choices=['coco', 'voc', 'citys', 'random', 'none'],
         help='Color palette used for visualization')
+    parser.add_argument(
+        '--no-bbox',
+        action='store_true',
+        help='Do not draw detection bounding boxes and category texts.')
+    parser.add_argument(
+        '--no-mask-boundary',
+        action='store_true',
+        help='Remove polygon boundaries when rendering masks.')
+    parser.add_argument(
+        '--mask-alpha',
+        type=float,
+        default=None,
+        help='Override mask transparency alpha (0~1).')
     # only for GLIP and Grounding DINO
     parser.add_argument(
         '--custom-entities',
@@ -168,11 +181,17 @@ def parse_args():
     for init_kw in init_kws:
         init_args[init_kw] = call_args.pop(init_kw)
 
-    return init_args, call_args
+    vis_ctrl = dict(
+        no_bbox=call_args.pop('no_bbox'),
+        no_mask_boundary=call_args.pop('no_mask_boundary'),
+        mask_alpha=call_args.pop('mask_alpha'),
+    )
+
+    return init_args, call_args, vis_ctrl
 
 
 def main():
-    init_args, call_args = parse_args()
+    init_args, call_args, vis_ctrl = parse_args()
     # TODO: Video and Webcam are currently not supported and
     #  may consume too much memory if your input folder has a lot of images.
     #  We will be optimized later.
@@ -180,6 +199,23 @@ def main():
 
     chunked_size = call_args.pop('chunked_size')
     inferencer.model.test_cfg.chunked_size = chunked_size
+
+    visualizer = inferencer.visualizer
+
+    if vis_ctrl['no_bbox']:
+        visualizer.draw_bboxes = lambda *args, **kwargs: None  # type: ignore
+        visualizer.draw_texts = lambda *args, **kwargs: None  # type: ignore
+
+    if vis_ctrl['no_mask_boundary']:
+        visualizer.draw_polygons = lambda *args, **kwargs: None  # type: ignore
+
+    # Apply mask transparency override if requested
+    base_alpha = getattr(visualizer, 'alpha', 0.8)
+    mask_alpha = vis_ctrl['mask_alpha']
+    if mask_alpha is not None:
+        visualizer.alpha = mask_alpha
+    else:
+        visualizer.alpha = base_alpha
 
     inferencer(**call_args)
 
