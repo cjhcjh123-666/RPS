@@ -207,7 +207,8 @@ class RapSAM(Mask2formerVideo):
         # 注意：这里可能会重复计算，但为了获取输出用于蒸馏是必要的
         # 在实际使用中可以考虑缓存forward结果
         if self.use_sam_distill and self.training and self.sam_distill_module is not None:
-            all_cls_scores, all_mask_preds = self.panoptic_head.forward(feats, batch_data_samples)
+            # forward返回4个值：all_cls_scores, all_masks_preds, all_iou_preds, object_kernels
+            all_cls_scores, all_mask_preds, all_iou_preds, object_kernels = self.panoptic_head.forward(feats, batch_data_samples)
         else:
             all_cls_scores, all_mask_preds = None, None
         

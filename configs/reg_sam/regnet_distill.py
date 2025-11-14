@@ -61,7 +61,7 @@ model = dict(
     # 分辨率蒸馏配置（创新点3）
     use_resolution_distill=True,
     resolution_distill=dict(
-        feat_channels=128,
+        feat_channels=256,
         sr_loss_weight=0.5,  # 超分辨率重建损失权重
         fa_loss_weight=0.5,  # 特征对齐损失权重
         fa_subscale=0.0625   # FA Loss下采样比例
