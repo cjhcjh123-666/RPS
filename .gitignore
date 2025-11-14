@@ -117,6 +117,7 @@ data
 *.pkl.json
 *.log.json
 docs/modelzoo_statistics.md
+PAPER_DRAFT.md
 mmdet/.mim
 work_dirs/
 demo/coco_val_random

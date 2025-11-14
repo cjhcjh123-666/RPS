@@ -95,11 +95,12 @@ class RapSAM(Mask2formerVideo):
     
     def _fuse_multi_scale_features(self, features):
         """
-        多尺度特征融合 - FPN特征金字塔融合
+        多尺度特征融合 - YOSONeck多尺度特征融合
         将所有尺度的特征上采样到最高分辨率，然后融合
         
         Args:
-            features: FPN输出的多尺度特征 [(B,C,H1,W1), (B,C,H2,W2), ...]
+            features: YOSONeck输出的多尺度特征 [(B,C,H1,W1), (B,C,H2,W2), ...]
+                     注意：YOSONeck返回 (fused_feat, (x5, x4, x3))，这里features是(x5, x4, x3)等
         
         Returns:
             fused_feature: 融合后的特征 (B,C,H1,W1)
