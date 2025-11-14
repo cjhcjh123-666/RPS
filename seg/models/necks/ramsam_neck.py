@@ -139,11 +139,16 @@ class LiteDeformConv(nn.Module):
         x5 = self.conv_a5(x5)
         x4 = self.conv_a4(x4)
         x3 = self.conv_a3(x3)
-
-        _x5 = F.interpolate(x5, scale_factor=8, align_corners=False, mode='bilinear')
-        _x4 = F.interpolate(x4, scale_factor=4, align_corners=False, mode='bilinear')
-        _x3 = F.interpolate(x3, scale_factor=2, align_corners=False, mode='bilinear')
         x2 = self.conv_a2(x2)
+        
+        # 使用x2的尺寸作为目标尺寸，确保所有特征尺寸匹配
+        target_size = x2.shape[-2:]
+        
+        # 将所有特征上采样到x2的尺寸
+        _x5 = F.interpolate(x5, size=target_size, mode='bilinear', align_corners=False)
+        _x4 = F.interpolate(x4, size=target_size, mode='bilinear', align_corners=False)
+        _x3 = F.interpolate(x3, size=target_size, mode='bilinear', align_corners=False)
+        
         x = _x5 + _x4 + _x3 + x2 + self.bias
 
         x = self.output_conv(x)
