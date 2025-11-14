@@ -80,17 +80,34 @@ class RapSAM(Mask2formerVideo):
             self.sam_distill_module = None
     
     def extract_feat(self, batch_inputs):
-        """Extract features from batch_inputs and adapt FPN output to single feature map."""
+        """Extract features from batch_inputs and adapt FPN output to single feature map.
+        
+        Note: RapSAMVideoHead expects a single tensor (fused feature), not a list.
+        So we always return the fused feature tensor.
+        """
         # 使用父类的骨干网络提取特征
         x = self.backbone(batch_inputs)
         
-        # 如果有neck（FPN），处理多尺度特征
+        # 如果有neck（YOSONeck），处理多尺度特征
         if self.with_neck:
             x = self.neck(x)
-            # ★ 优雅的多尺度特征融合策略
-            if isinstance(x, (list, tuple)):
-                x = self._fuse_multi_scale_features(x)
+            # YOSONeck可能返回 (fused_feat, multi_scale) 或单个tensor
+            # RapSAMVideoHead期望单个tensor（融合后的特征），所以我们需要提取融合特征
+            if isinstance(x, tuple):
+                # YOSONeck返回 (fused_feat, multi_scale) 格式
+                # 取第一个元素（融合后的特征）
+                x = x[0]
+            elif isinstance(x, list):
+                # 如果neck返回列表，取第一个元素（通常是融合后的特征）
+                x = x[0] if len(x) > 0 else x
+            # 如果neck返回单个tensor，直接使用
         
+        # 如果没有neck，backbone返回的可能是列表或单个tensor
+        if isinstance(x, (list, tuple)):
+            # 取第一个元素（最高分辨率的特征）
+            x = x[0] if len(x) > 0 else x
+        
+        # 确保返回单个tensor
         return x
     
     def _fuse_multi_scale_features(self, features):
@@ -186,8 +203,7 @@ class RapSAM(Mask2formerVideo):
             
             # 提取高分辨率特征（需要梯度）
             feats_high = self.extract_feat(x)
-            if isinstance(feats_high, (list, tuple)):
-                feats_high = feats_high[0] if len(feats_high) > 0 else feats_high
+            # extract_feat现在返回单个tensor（融合后的特征）
             
             # 计算分辨率蒸馏损失
             resolution_distill_losses = self.resolution_distill_module(
@@ -203,9 +219,10 @@ class RapSAM(Mask2formerVideo):
             feats_high = self.extract_feat(x)
         
         # 标准损失计算
+        # feats_high现在是单个tensor（融合后的特征），RapSAMVideoHead期望这种格式
         if isinstance(batch_data_samples[0], TrackDataSample):
-            feats = feats_high.reshape((bs, num_frames, *feats_high.shape[1:]))
-            feats = feats.flatten(0, 1)
+            # 对于视频数据，需要对特征进行reshape
+            feats = feats_high.reshape((bs, num_frames, *feats_high.shape[1:])).flatten(0, 1)
         else:
             feats = feats_high
         
@@ -229,7 +246,8 @@ class RapSAM(Mask2formerVideo):
             if self.with_neck:
                 # 复用backbone特征（如果已经计算过）
                 # 为了节省显存，我们直接使用feats（已经通过neck处理）
-                student_feats = [feats] if not isinstance(feats, (list, tuple)) else feats
+                # feats现在是单个tensor，需要包装成列表用于SAM蒸馏
+                student_feats = [feats]
             else:
                 # 需要重新提取backbone特征
                 with torch.no_grad():

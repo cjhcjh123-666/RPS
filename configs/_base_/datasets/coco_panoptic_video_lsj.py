@@ -41,7 +41,7 @@ train_pipeline = [
                 type=RandomResize,
                 resize_type=Resize,
                 scale=image_size,
-                ratio_range=(.8, 2.),
+                ratio_range=(.8, 1.5),
                 keep_ratio=True,
             ),
         ]),
@@ -67,8 +67,8 @@ train_dataloader = dict(
     dataset=dict(
         type=CocoPanopticOVDataset,
         data_root=data_root,
-        ann_file='annotations/panoptic_train2017.json',
-        data_prefix=dict(img='train2017/', seg='annotations/panoptic_train2017/'),
+        ann_file='annotations/panoptic_val2017.json',
+        data_prefix=dict(img='val2017/', seg='annotations/panoptic_val2017/'),
         filter_cfg=dict(filter_empty_gt=True, min_size=32),
         pipeline=train_pipeline,
         backend_args=backend_args
