@@ -5,3 +5,6 @@ from .mask_pool import mask_pool
 # from .online_pq_utils import cal_pq, IoUObj, NO_OBJ_ID
 from .no_obj import NO_OBJ
 # from .offline_video_metrics import vpq_eval, stq
+from .fa_loss import FALoss
+from .resolution_distill import ResolutionDistillModule, SuperResolutionDecoder
+from .sam_distill import SAMDistillModule
