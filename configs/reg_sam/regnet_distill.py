@@ -15,10 +15,10 @@ from mmdet.models.backbones import ResNet
 from seg.models.heads.rapsam_head import RapSAMVideoHead
 from seg.models.detectors.rapsam import RapSAM
 from seg.models.data_preprocessor.vid_sam_preprocessor import VideoPromptDataPreprocessor
-
+from seg.models.neck import YOSONeck
 with read_base():
     from .._base_.default_runtime import *
-    from .._base_.datasets.coco_panoptic_lsj import *
+    from .._base_.datasets.coco_panoptic_video_lsj import *
     from .._base_.schedules.schedule_12e import *
 
 backend_args = None
@@ -69,32 +69,34 @@ model = dict(
     # SAM蒸馏配置（创新点2）
     use_sam_distill=True,
     sam_distill=dict(
-        teacher_model=None,  # 可以配置SAM教师模型，如果为None则需要在训练时加载
-        teacher_checkpoint=None,  # SAM教师模型检查点路径
+        # 配置SAM教师模型（使用完整的SAM模型）
+        teacher_model=dict(
+            type='SAMTeacherModel',  # 使用SAM教师模型包装器
+            model_type='vit_h',  # SAM模型类型：'vit_h', 'vit_l', 'vit_b'
+            checkpoint='/data/chenjiahui/RPS/checkpoint/sam_vit_h_4b8939.pth',  # SAM checkpoint路径
+            freeze=True  # 冻结教师模型参数
+        ),
+        teacher_checkpoint=None,  # 如果teacher_model中已配置checkpoint，这里可以为None
         feat_distill_weight=1.0,  # 特征蒸馏损失权重
-        output_distill_weight=1.0,  # 输出蒸馏损失权重
+        output_distill_weight=1.0,  # 输出蒸馏损失权重（如果SAM结构支持）
         temperature=4.0,  # 蒸馏温度
-        distill_feat_layers=[0, 1, 2, 3]  # 需要蒸馏的特征层索引
+        distill_feat_layers=[0]  # SAM只输出单尺度特征，所以只蒸馏第0层
     ),
     data_preprocessor=data_preprocessor,
     backbone=dict(
         type='RegNet',
-        arch='regnetx_800mf',
+        arch='regnetx_12gf',
         out_indices=(0, 1, 2, 3),
         frozen_stages=-1,
         norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=False,
-        init_cfg=dict(type='Pretrained', checkpoint='open-mmlab://regnetx_800mf')
+        init_cfg=dict(type='Pretrained', checkpoint='open-mmlab://regnetx_12gf')
     ),
     neck=dict(
-        type='FPN',
-        in_channels=[64, 128, 288, 672],
-        out_channels=128,
-        num_outs=4,
-        start_level=0,
-        end_level=-1,
-        add_extra_convs='on_output',
-        relu_before_extra_convs=True
+        type=YOSONeck,
+        agg_dim=128,
+        hidden_dim=256,
+        backbone_shape=[192, 384, 768, 2240],
     ),
     panoptic_head=dict(
         type=RapSAMVideoHead,
@@ -106,7 +108,7 @@ model = dict(
         sphere_cls=True,
         ov_classifier_name='convnext_large_d_320_CocoPanopticOVDataset',
         num_stages=3,
-        feat_channels=128,
+        feat_channels=256,
         num_things_classes=num_things_classes,
         num_stuff_classes=num_stuff_classes,
         num_queries=80,

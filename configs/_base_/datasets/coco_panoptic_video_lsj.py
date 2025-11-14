@@ -14,7 +14,7 @@ from seg.datasets.coco_ov import CocoPanopticOVDataset
 from seg.datasets.pipeliens.loading import LoadPanopticAnnotationsHB
 from seg.datasets.samplers.batch_sampler import VideoSegAspectRatioBatchSampler
 
-data_root = 'data/coco/'
+data_root = '/zhangyafei/RMP-SAM/data/coco/'
 backend_args = None
 image_size = (1280, 736)
 

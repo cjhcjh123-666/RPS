@@ -121,7 +121,8 @@ mmdet/.mim
 work_dirs/
 demo/coco_val_random
 outputs
-
+DSRL-main
+segment-anything-main
 # Pytorch
 *.pth
 *.py~

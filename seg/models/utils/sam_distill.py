@@ -35,13 +35,42 @@ class SAMDistillModule(nn.Module):
         # 构建教师模型（如果提供配置）
         self.teacher_model = None
         if teacher_model is not None:
-            self.teacher_model = MODELS.build(teacher_model)
-            if teacher_checkpoint is not None:
-                self._load_teacher_checkpoint(teacher_checkpoint)
+            # 如果teacher_model是dict配置，构建模型
+            if isinstance(teacher_model, dict):
+                # 如果配置中指定了checkpoint，先加载checkpoint
+                if teacher_checkpoint is not None:
+                    teacher_model['checkpoint'] = teacher_checkpoint
+                self.teacher_model = MODELS.build(teacher_model)
+            else:
+                # 如果是已经构建的模型
+                self.teacher_model = teacher_model
+                if teacher_checkpoint is not None:
+                    self._load_teacher_checkpoint(teacher_checkpoint)
+            
             # 冻结教师模型参数
             for param in self.teacher_model.parameters():
                 param.requires_grad = False
             self.teacher_model.eval()
+        elif teacher_checkpoint is not None:
+            # 如果没有提供teacher_model配置，但提供了checkpoint，尝试使用默认配置
+            import logging
+            logger = logging.getLogger()
+            logger.warning(
+                "teacher_model is None but teacher_checkpoint is provided. "
+                "Trying to use SAMTeacherModel with default config."
+            )
+            try:
+                # 尝试使用SAMTeacherModel（需要segment-anything-main在项目中）
+                self.teacher_model = MODELS.build(dict(
+                    type='SAMTeacherModel',
+                    model_type='vit_h',  # 默认使用vit_h
+                    checkpoint=teacher_checkpoint,
+                    freeze=True
+                ))
+            except Exception as e:
+                logger.error(f"Failed to build SAM teacher model: {e}")
+                logger.info("SAM distillation will be disabled.")
+                self.teacher_model = None
         
         # 需要蒸馏的特征层索引
         self.distill_feat_layers = distill_feat_layers or [0, 1, 2, 3]
