@@ -168,17 +168,22 @@ class RapSAM(Mask2formerVideo):
             x = batch_inputs
         
         # 分辨率蒸馏：如果启用，需要处理低分辨率和高分辨率两个路径
+        # 显存优化：在no_grad中提取低分辨率特征（因为低分辨率路径不需要梯度）
         if self.use_resolution_distill and self.training:
             # 创建低分辨率输入（尺寸减半）
             # 使用scale_factor而不是固定尺寸，避免尺寸不匹配问题
             x_low = F.interpolate(x, scale_factor=0.5, mode='bilinear', align_corners=False, recompute_scale_factor=True)
             
-            # 提取低分辨率特征
-            feats_low = self.extract_feat(x_low)
-            if isinstance(feats_low, (list, tuple)):
-                feats_low = feats_low[0] if len(feats_low) > 0 else feats_low
+            # 显存优化：低分辨率特征提取不需要梯度（超分辨率路径是辅助的）
+            with torch.no_grad():
+                # 提取低分辨率特征
+                feats_low = self.extract_feat(x_low)
+                if isinstance(feats_low, (list, tuple)):
+                    feats_low = feats_low[0] if len(feats_low) > 0 else feats_low
+                # 分离计算图，避免保存梯度
+                feats_low = feats_low.detach()
             
-            # 提取高分辨率特征
+            # 提取高分辨率特征（需要梯度）
             feats_high = self.extract_feat(x)
             if isinstance(feats_high, (list, tuple)):
                 feats_high = feats_high[0] if len(feats_high) > 0 else feats_high
@@ -189,6 +194,9 @@ class RapSAM(Mask2formerVideo):
                 sr_feat=feats_low,
                 target_image=x
             )
+            
+            # 显存优化：清理中间变量
+            del x_low, feats_low
         else:
             resolution_distill_losses = {}
             feats_high = self.extract_feat(x)
@@ -212,32 +220,34 @@ class RapSAM(Mask2formerVideo):
         else:
             all_cls_scores, all_mask_preds = None, None
         
-        # SAM蒸馏损失
+        # SAM蒸馏损失（显存优化：使用torch.no_grad确保不保存梯度）
         if self.use_sam_distill and self.training and self.sam_distill_module is not None:
-            # 获取多尺度特征（用于特征蒸馏）
+            # 显存优化：在no_grad上下文中提取学生特征（用于特征对齐）
+            # 注意：学生特征需要梯度，所以不能完全在no_grad中
+            # 但我们可以复用已有的feats，避免重复计算
             if self.with_neck:
-                # 如果使用neck，获取多尺度特征
-                backbone_feats = self.backbone(x)
-                if isinstance(backbone_feats, (list, tuple)):
-                    neck_feats = self.neck(backbone_feats)
-                    if isinstance(neck_feats, (list, tuple)):
-                        student_feats = neck_feats
-                    else:
-                        student_feats = [neck_feats]
-                else:
-                    student_feats = [backbone_feats]
+                # 复用backbone特征（如果已经计算过）
+                # 为了节省显存，我们直接使用feats（已经通过neck处理）
+                student_feats = [feats] if not isinstance(feats, (list, tuple)) else feats
             else:
-                backbone_feats = self.backbone(x)
-                student_feats = [backbone_feats] if not isinstance(backbone_feats, (list, tuple)) else backbone_feats
+                # 需要重新提取backbone特征
+                with torch.no_grad():
+                    backbone_feats = self.backbone(x)
+                    student_feats = [backbone_feats] if not isinstance(backbone_feats, (list, tuple)) else backbone_feats
             
             # 计算SAM蒸馏损失
             sam_distill_losses = self.sam_distill_module(
                 student_feats=student_feats,
                 student_cls_scores=all_cls_scores[-1] if len(all_cls_scores) > 0 else None,
                 student_mask_preds=all_mask_preds[-1] if len(all_mask_preds) > 0 else None,
-                batch_inputs=x
+                batch_inputs=x,
+                student_backbone=self.backbone  # 用于checkpoint模式
             )
             losses.update(sam_distill_losses)
+            
+            # 显存优化：清理中间变量
+            if 'backbone_feats' in locals():
+                del backbone_feats
         
         # 添加分辨率蒸馏损失
         losses.update(resolution_distill_losses)

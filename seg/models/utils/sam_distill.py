@@ -24,13 +24,23 @@ class SAMDistillModule(nn.Module):
         feat_distill_weight: float = 1.0,
         output_distill_weight: float = 1.0,
         temperature: float = 4.0,
-        distill_feat_layers: Optional[List[int]] = None
+        distill_feat_layers: Optional[List[int]] = None,
+        # 显存优化参数
+        use_low_res_sam: bool = True,  # 使用低分辨率SAM输入（512而不是1024）
+        sam_input_size: int = 512,  # SAM输入尺寸（降低以节省显存）
+        distill_interval: int = 1,  # 每N个迭代进行一次SAM蒸馏（1=每次都蒸馏）
     ):
         super(SAMDistillModule, self).__init__()
         
         self.feat_distill_weight = feat_distill_weight
         self.output_distill_weight = output_distill_weight
         self.temperature = temperature
+        
+        # 显存优化参数
+        self.use_low_res_sam = use_low_res_sam
+        self.sam_input_size = sam_input_size
+        self.distill_interval = distill_interval
+        self._iter_count = 0  # 迭代计数器
         
         # 构建教师模型（如果提供配置）
         self.teacher_model = None
@@ -97,12 +107,19 @@ class SAMDistillModule(nn.Module):
         if self.teacher_model is not None:
             self.teacher_model.load_state_dict(state_dict, strict=False)
     
-    def forward_teacher(self, batch_inputs: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def forward_teacher(
+        self, 
+        batch_inputs: torch.Tensor, 
+        use_low_res: bool = True,
+        student_backbone: Optional[torch.nn.Module] = None
+    ) -> Dict[str, torch.Tensor]:
         """
         前向传播教师模型，获取教师特征和输出。
         
         Args:
             batch_inputs: 输入图像，形状为 (B, C, H, W)
+            use_low_res: 是否使用低分辨率输入
+            student_backbone: 学生模型的backbone（用于checkpoint模式）
         
         Returns:
             dict: 包含教师模型的特征和输出
@@ -113,9 +130,23 @@ class SAMDistillModule(nn.Module):
         if self.teacher_model is None:
             return {}
         
+        # 显存优化：使用低分辨率输入
+        if use_low_res and self.use_low_res_sam:
+            # 将输入resize到较小尺寸以节省显存
+            import torch.nn.functional as F
+            original_size = batch_inputs.shape[-2:]
+            batch_inputs_low = F.interpolate(
+                batch_inputs,
+                size=(self.sam_input_size, self.sam_input_size),
+                mode='bilinear',
+                align_corners=False
+            )
+        else:
+            batch_inputs_low = batch_inputs
+        
         with torch.no_grad():
-            # 提取特征
-            teacher_feats = self.teacher_model.extract_feat(batch_inputs)
+            # 提取特征（使用低分辨率输入）
+            teacher_feats = self.teacher_model.extract_feat(batch_inputs_low)
             
             # 获取head输出（需要根据实际模型结构调整）
             if hasattr(self.teacher_model, 'panoptic_head'):
@@ -247,7 +278,8 @@ class SAMDistillModule(nn.Module):
         student_feats: List[torch.Tensor],
         student_cls_scores: Optional[torch.Tensor] = None,
         student_mask_preds: Optional[torch.Tensor] = None,
-        batch_inputs: Optional[torch.Tensor] = None
+        batch_inputs: Optional[torch.Tensor] = None,
+        student_backbone: Optional[torch.nn.Module] = None
     ) -> Dict[str, torch.Tensor]:
         """
         计算SAM蒸馏损失。
@@ -266,8 +298,13 @@ class SAMDistillModule(nn.Module):
         if self.teacher_model is None or batch_inputs is None:
             return losses
         
-        # 获取教师模型输出
-        teacher_outputs = self.forward_teacher(batch_inputs)
+        # 显存优化：只在指定间隔进行SAM蒸馏
+        self._iter_count += 1
+        if self.distill_interval > 1 and self._iter_count % self.distill_interval != 0:
+            return losses
+        
+        # 获取教师模型输出（传递student_backbone用于checkpoint模式，使用低分辨率）
+        teacher_outputs = self.forward_teacher(batch_inputs, student_backbone=student_backbone, use_low_res=self.use_low_res_sam)
         
         # 特征蒸馏损失
         if 'features' in teacher_outputs and len(teacher_outputs['features']) > 0:

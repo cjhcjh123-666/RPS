@@ -74,12 +74,19 @@ class ResolutionDistillModule(nn.Module):
         feat_channels: int = 128,
         sr_loss_weight: float = 0.5,
         fa_loss_weight: float = 0.5,
-        fa_subscale: float = 0.0625
+        fa_subscale: float = 0.0625,
+        # 显存优化参数
+        use_low_res_sr: bool = True,  # 使用较低分辨率的超分辨率重建
+        sr_target_scale: float = 1.5,  # 超分辨率目标倍数（降低以节省显存，默认2.0）
     ):
         super(ResolutionDistillModule, self).__init__()
         
         self.sr_loss_weight = sr_loss_weight
         self.fa_loss_weight = fa_loss_weight
+        
+        # 显存优化参数
+        self.use_low_res_sr = use_low_res_sr
+        self.sr_target_scale = sr_target_scale
         
         # 超分辨率解码器
         self.sr_decoder = SuperResolutionDecoder(in_channels=feat_channels, out_channels=3)
@@ -117,8 +124,27 @@ class ResolutionDistillModule(nn.Module):
                 - 'loss_fa': 特征对齐损失
                 - 'loss_resolution_distill': 总的分辨率蒸馏损失
         """
+        # 显存优化：降低超分辨率重建的目标分辨率
+        if self.use_low_res_sr:
+            # 使用较小的目标分辨率
+            h, w = target_image.shape[-2:]
+            target_size = (int(h * self.sr_target_scale), int(w * self.sr_target_scale))
+            # 限制最大尺寸以避免OOM
+            max_size = 512
+            if target_size[0] > max_size or target_size[1] > max_size:
+                scale = min(max_size / target_size[0], max_size / target_size[1])
+                target_size = (int(target_size[0] * scale), int(target_size[1] * scale))
+            target_image_resized = F.interpolate(
+                target_image,
+                size=target_size,
+                mode='bilinear',
+                align_corners=False
+            )
+        else:
+            target_size = target_image.shape[-2:]
+            target_image_resized = target_image
+        
         # 上采样分割特征到目标分辨率
-        target_size = target_image.shape[-2:]
         seg_feat_up = F.interpolate(
             seg_feat,
             size=target_size,
@@ -129,8 +155,17 @@ class ResolutionDistillModule(nn.Module):
         # 超分辨率重建
         sr_reconstructed = self.sr_decoder(sr_feat)
         
+        # 如果重建结果尺寸不匹配，resize到目标尺寸
+        if sr_reconstructed.shape[-2:] != target_size:
+            sr_reconstructed = F.interpolate(
+                sr_reconstructed,
+                size=target_size,
+                mode='bilinear',
+                align_corners=False
+            )
+        
         # 计算超分辨率重建损失（MSE）
-        loss_sr = self.mse_loss(sr_reconstructed, target_image)
+        loss_sr = self.mse_loss(sr_reconstructed, target_image_resized)
         
         # 将分割特征转换为RGB特征用于特征对齐
         # 使用中间特征进行对齐，而不是最终输出

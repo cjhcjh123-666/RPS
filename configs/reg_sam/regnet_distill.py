@@ -64,7 +64,10 @@ model = dict(
         feat_channels=256,
         sr_loss_weight=0.5,  # 超分辨率重建损失权重
         fa_loss_weight=0.5,  # 特征对齐损失权重
-        fa_subscale=0.0625   # FA Loss下采样比例
+        fa_subscale=0.0625,  # FA Loss下采样比例
+        # 显存优化
+        use_low_res_sr=True,  # 使用较低分辨率的超分辨率重建
+        sr_target_scale=1.5,  # 超分辨率目标倍数（降低以节省显存，默认2.0）
     ),
     # SAM蒸馏配置（创新点2）
     use_sam_distill=True,
@@ -72,7 +75,7 @@ model = dict(
         # 配置SAM教师模型（使用完整的SAM模型）
         teacher_model=dict(
             type='SAMTeacherModel',  # 使用SAM教师模型包装器
-            model_type='vit_h',  # SAM模型类型：'vit_h', 'vit_l', 'vit_b'
+            model_type='vit_h',  # SAM模型类型：'vit_h', 'vit_l', 'vit_b'（可改为'vit_l'或'vit_b'以节省显存）
             checkpoint='/data/chenjiahui/RPS/checkpoint/sam_vit_h_4b8939.pth',  # SAM checkpoint路径
             freeze=True  # 冻结教师模型参数
         ),
@@ -80,7 +83,11 @@ model = dict(
         feat_distill_weight=1.0,  # 特征蒸馏损失权重
         output_distill_weight=1.0,  # 输出蒸馏损失权重（如果SAM结构支持）
         temperature=4.0,  # 蒸馏温度
-        distill_feat_layers=[0]  # SAM只输出单尺度特征，所以只蒸馏第0层
+        distill_feat_layers=[0],  # SAM只输出单尺度特征，所以只蒸馏第0层
+        # 显存优化参数
+        use_low_res_sam=True,  # 使用低分辨率SAM输入（512而不是1024）以节省显存
+        sam_input_size=512,  # SAM输入尺寸（降低以节省显存，默认1024）
+        distill_interval=2,  # 每2个迭代进行一次SAM蒸馏（1=每次都蒸馏，增大可节省显存）
     ),
     data_preprocessor=data_preprocessor,
     backbone=dict(
