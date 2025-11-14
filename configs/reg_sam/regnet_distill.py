@@ -15,7 +15,7 @@ from mmdet.models.backbones import ResNet
 from seg.models.heads.rapsam_head import RapSAMVideoHead
 from seg.models.detectors.rapsam import RapSAM
 from seg.models.data_preprocessor.vid_sam_preprocessor import VideoPromptDataPreprocessor
-from seg.models.neck import YOSONeck
+from seg.models.necks.ramsam_neck import YOSONeck
 with read_base():
     from .._base_.default_runtime import *
     from .._base_.datasets.coco_panoptic_video_lsj import *
