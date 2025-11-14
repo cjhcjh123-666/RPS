@@ -96,7 +96,7 @@ model = dict(
         type=YOSONeck,
         agg_dim=128,
         hidden_dim=256,
-        backbone_shape=[192, 384, 768, 2240],
+        backbone_shape=[224, 448, 896, 2240],
     ),
     panoptic_head=dict(
         type=RapSAMVideoHead,
