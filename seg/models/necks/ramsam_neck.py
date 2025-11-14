@@ -116,14 +116,23 @@ class LiteDeformConv(nn.Module):
         x = self.deform_conv1(x5)
 
         p4 = self.lateral_conv1(features_list[-2])
+        # 确保尺寸匹配（处理分辨率蒸馏时的尺寸不匹配问题）
+        if p4.shape != x.shape:
+            x = F.interpolate(x, size=p4.shape[-2:], mode='bilinear', align_corners=False)
         x4 = p4 + x
         x = self.deform_conv2(x4)
 
         p3 = self.lateral_conv2(features_list[-3])
+        # 确保尺寸匹配
+        if p3.shape != x.shape:
+            x = F.interpolate(x, size=p3.shape[-2:], mode='bilinear', align_corners=False)
         x3 = p3 + x
         x = self.deform_conv3(x3)
 
         p2 = self.lateral_conv3(features_list[-4])
+        # 确保尺寸匹配
+        if p2.shape != x.shape:
+            x = F.interpolate(x, size=p2.shape[-2:], mode='bilinear', align_corners=False)
         x2 = p2 + x
 
         # CFA

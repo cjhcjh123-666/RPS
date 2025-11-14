@@ -170,7 +170,8 @@ class RapSAM(Mask2formerVideo):
         # 分辨率蒸馏：如果启用，需要处理低分辨率和高分辨率两个路径
         if self.use_resolution_distill and self.training:
             # 创建低分辨率输入（尺寸减半）
-            x_low = F.interpolate(x, size=[s // 2 for s in x.shape[2:]], mode='bilinear', align_corners=False)
+            # 使用scale_factor而不是固定尺寸，避免尺寸不匹配问题
+            x_low = F.interpolate(x, scale_factor=0.5, mode='bilinear', align_corners=False, recompute_scale_factor=True)
             
             # 提取低分辨率特征
             feats_low = self.extract_feat(x_low)
