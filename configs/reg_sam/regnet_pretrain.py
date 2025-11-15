@@ -7,6 +7,7 @@ from mmdet.models.backbones import ResNet
 from seg.models.heads.rapsam_head import RapSAMVideoHead
 from seg.models.detectors.rapsam import RapSAM
 from seg.models.data_preprocessor.vid_sam_preprocessor import VideoPromptDataPreprocessor
+from seg.models.necks.ramsam_neck import YOSONeck
 
 with read_base():
     from .._base_.default_runtime import *
@@ -60,6 +61,12 @@ model = dict(
         norm_eval=False,
         init_cfg=dict(type='Pretrained', checkpoint='open-mmlab://regnetx_800mf')
     ),
+    # neck=dict(
+    #     type=YOSONeck,
+    #     agg_dim=64,
+    #     hidden_dim=128,
+    #     backbone_shape=[64, 128, 288, 672],
+    # ),
     neck=dict(
         type='FPN',
         in_channels=[64, 128, 288, 672],

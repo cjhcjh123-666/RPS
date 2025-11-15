@@ -16,7 +16,7 @@ from seg.datasets.samplers.batch_sampler import VideoSegAspectRatioBatchSampler
 
 data_root = '/data/zhangyafei/RMP-SAM/data/coco/'
 backend_args = None
-image_size = (1280, 736)
+image_size = (640, 384)
 
 train_pipeline = [
     dict(
@@ -59,8 +59,8 @@ train_pipeline = [
     dict(type=PackVidSegInputs)
 ]
 train_dataloader = dict(
-    batch_size=1,
-    num_workers=2,
+    batch_size=16,
+    num_workers=16,
     persistent_workers=True,
     sampler=dict(type=DefaultSampler, shuffle=True),
     batch_sampler=dict(type=VideoSegAspectRatioBatchSampler),
@@ -77,7 +77,7 @@ train_dataloader = dict(
 
 test_pipeline = [
     dict(type=LoadImageFromFile, backend_args=backend_args),
-    dict(type=Resize, scale=(1333, 800), keep_ratio=True),
+    dict(type=Resize, scale=(640, 384), keep_ratio=True),
     dict(type=LoadPanopticAnnotations, backend_args=backend_args),
     dict(
         type=PackDetInputs,
@@ -85,8 +85,8 @@ test_pipeline = [
     )
 ]
 val_dataloader = dict(
-    batch_size=2,
-    num_workers=2,
+    batch_size=4,
+    num_workers=8,
     persistent_workers=True,
     drop_last=False,
     sampler=dict(type=DefaultSampler, shuffle=False),

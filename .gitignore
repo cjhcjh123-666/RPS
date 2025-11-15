@@ -68,7 +68,8 @@ instance/
 # Sphinx documentation
 docs/en/_build/
 docs/zh_cn/_build/
-
+OMG-Seg-main
+RMP-SAM-master
 # PyBuilder
 target/
 

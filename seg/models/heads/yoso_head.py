@@ -324,9 +324,9 @@ class CrossAttenHead(nn.Module):
         # assert use_kernel_updator
         if use_kernel_updator:
             self.kernel_update = KernelUpdator(
-                in_channels=in_channels,
-                feat_channels=in_channels,
-                out_channels=in_channels,
+                in_channels=256,
+                feat_channels=256,
+                out_channels=256,
                 input_feat_shape=3,
                 act_cfg=dict(type='ReLU', inplace=True),
                 norm_cfg=dict(type='LN')

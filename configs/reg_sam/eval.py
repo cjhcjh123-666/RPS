@@ -19,7 +19,7 @@ from seg.models.data_preprocessor.vid_sam_preprocessor import VideoPromptDataPre
 from seg.models.necks.ramsam_neck import YOSONeck
 with read_base():
     from .._base_.default_runtime import *
-    from .._base_.datasets.coco_panoptic_video_lsj import *
+    from .._base_.datasets.coco_panoptic_lsj import *
     from .._base_.schedules.schedule_12e import *
 
 backend_args = None
@@ -122,7 +122,7 @@ model = dict(
         prompt_with_kernel_updator=True,
         panoptic_with_kernel_updator=True,  
         use_adaptor=True,
-        use_kernel_updator=True,
+        use_kernel_updator=False,
         use_self_attn=False,
         sphere_cls=True,
         ov_classifier_name='convnext_large_d_320_CocoPanopticOVDataset',
@@ -231,13 +231,8 @@ default_hooks = dict(
     timer=dict(type='mmengine.hooks.IterTimerHook'),
     visualization=dict(type='mmdet.engine.hooks.DetVisualizationHook')
 )
-val_dataloader=None
-val_evaluator=None
-val_cfg=None
 
 auto_scale_lr = dict(base_batch_size=1, enable=False)
 find_unused_parameters = False
 
-test_dataloader=None
-test_evaluator=None
-test_cfg=None
+
