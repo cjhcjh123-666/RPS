@@ -16,7 +16,7 @@ from seg.datasets.samplers.batch_sampler import VideoSegAspectRatioBatchSampler
 
 data_root = '/data/zhangyafei/RMP-SAM/data/coco/'
 backend_args = None
-image_size = (1280, 736)
+image_size = (640, 384)
 
 train_pipeline = [
     dict(
@@ -59,16 +59,16 @@ train_pipeline = [
     dict(type=PackVidSegInputs)
 ]
 train_dataloader = dict(
-    batch_size=1,
-    num_workers=4,
+    batch_size=8,
+    num_workers=8,
     persistent_workers=True,
     sampler=dict(type=DefaultSampler, shuffle=True),
     batch_sampler=dict(type=VideoSegAspectRatioBatchSampler),
     dataset=dict(
         type=CocoPanopticOVDataset,
         data_root=data_root,
-        ann_file='annotations/panoptic_val2017.json',
-        data_prefix=dict(img='val2017/', seg='annotations/panoptic_val2017/'),
+        ann_file='annotations/panoptic_train2017.json',
+        data_prefix=dict(img='train2017/', seg='annotations/panoptic_train2017/'),
         filter_cfg=dict(filter_empty_gt=True, min_size=32),
         pipeline=train_pipeline,
         backend_args=backend_args
@@ -77,7 +77,7 @@ train_dataloader = dict(
 
 test_pipeline = [
     dict(type=LoadImageFromFile, backend_args=backend_args),
-    dict(type=Resize, scale=(1280, 736), keep_ratio=True),
+    dict(type=Resize, scale=(640, 384), keep_ratio=True),
     dict(type=LoadPanopticAnnotations, backend_args=backend_args),
     dict(
         type=PackDetInputs,
