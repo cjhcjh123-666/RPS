@@ -11,6 +11,9 @@ class ADEPanopticOVDataset(CocoPanopticDataset):
     """ADE Open Vocabulary dataset for Panoptic segmentation.
     The class names are changed.
     """
+    
+    # 指定dataset_name用于生成分类器文件名（匹配已有的分类器文件）
+    dataset_name = 'ADEPanopticOVDataset'
 
     METAINFO = {
         'classes':

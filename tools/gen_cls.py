@@ -3,7 +3,11 @@ import argparse
 import copy
 import os
 import os.path as osp
+import sys
 from typing import List, Optional
+
+# 添加项目根目录到Python路径，以便导入本地包ext
+sys.path.insert(0, osp.join(osp.dirname(__file__), '..'))
 
 import torch
 import torch.distributed as dist

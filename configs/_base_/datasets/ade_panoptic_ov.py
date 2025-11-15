@@ -8,7 +8,7 @@ from mmdet.evaluation import CocoPanopticMetric
 
 from seg.datasets.ade_ov import ADEPanopticOVDataset
 
-data_root = '/data/chenjiahui/regnet_sam_l/datasetss/ade/'
+data_root = '/9950backfile/zhangyafei/ade/'
 backend_args = None
 image_size = (1024, 1024)
 
