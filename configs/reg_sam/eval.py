@@ -19,7 +19,7 @@ from seg.models.data_preprocessor.vid_sam_preprocessor import VideoPromptDataPre
 from seg.models.necks.ramsam_neck import YOSONeck
 with read_base():
     from .._base_.default_runtime import *
-    from .._base_.datasets.coco_panoptic_lsj import *
+    from .._base_.datasets.coco_panoptic_video_lsj import *
     from .._base_.schedules.schedule_12e import *
 
 backend_args = None

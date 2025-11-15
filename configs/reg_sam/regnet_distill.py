@@ -231,13 +231,13 @@ default_hooks = dict(
     timer=dict(type='mmengine.hooks.IterTimerHook'),
     visualization=dict(type='mmdet.engine.hooks.DetVisualizationHook')
 )
-val_dataloader=None
-val_evaluator=None
-val_cfg=None
+# val_dataloader=None
+# val_evaluator=None
+# val_cfg=None
 
 auto_scale_lr = dict(base_batch_size=1, enable=False)
 find_unused_parameters = False
 
-test_dataloader=None
-test_evaluator=None
-test_cfg=None
+# test_dataloader=None
+# test_evaluator=None
+# test_cfg=None
