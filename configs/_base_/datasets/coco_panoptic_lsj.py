@@ -11,7 +11,7 @@ from seg.datasets.pipeliens.loading import LoadPanopticAnnotationsHB
 from seg.datasets.pipeliens.loading import FilterAnnotationsHB
 data_root = '/data/zhangyafei/RMP-SAM/data/coco/'
 backend_args = None
-image_size = (1024, 1024)
+image_size = (1280, 736)
 
 train_pipeline = [
     dict(
@@ -42,16 +42,16 @@ train_pipeline = [
     dict(type=PackDetInputs)
 ]
 train_dataloader = dict(
-    batch_size=8,
-    num_workers=24,
+    batch_size=4,
+    num_workers=8,
     persistent_workers=True,
     sampler=dict(type=DefaultSampler, shuffle=True),
     batch_sampler=dict(type=AspectRatioBatchSampler),
     dataset=dict(
         type=CocoPanopticOVDataset,
         data_root=data_root,
-        ann_file='annotations/panoptic_val2017.json',
-        data_prefix=dict(img='val2017/', seg='annotations/panoptic_val2017/'),
+        ann_file='annotations/panoptic_train2017.json',
+        data_prefix=dict(img='train2017/', seg='annotations/panoptic_train2017/'),
         filter_cfg=dict(filter_empty_gt=True, min_size=32),
         pipeline=train_pipeline,
         backend_args=backend_args
@@ -60,7 +60,7 @@ train_dataloader = dict(
 
 test_pipeline = [
     dict(type=LoadImageFromFile, backend_args=backend_args),
-    dict(type=Resize, scale=(1024, 1024), keep_ratio=False),
+    dict(type=Resize, scale=(1280, 720), keep_ratio=False),
     dict(type=LoadPanopticAnnotations, backend_args=backend_args),
     dict(
         type=PackDetInputs,

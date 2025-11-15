@@ -7,7 +7,6 @@
 3. 分辨率蒸馏学习（参考DSRL）
 """
 from mmengine.config import read_base
-from configs._base_.datasets.ade_panoptic_ov import val_dataloader
 from mmdet.models import BatchFixedSizePad, CrossEntropyLoss, DiceLoss, MaskFormerFusionHead, FocalLoss
 from mmdet.models.task_modules.assigners import HungarianAssigner, ClassificationCost, CrossEntropyLossCost, DiceCost
 from mmdet.models.task_modules.samplers import MaskPseudoSampler
@@ -17,12 +16,11 @@ from mmdet.models.data_preprocessors import DetDataPreprocessor
 
 from seg.models.heads.rapsam_head import RapSAMVideoHead
 from seg.models.detectors.rapsam import RapSAM
-from seg.models.data_preprocessor.vid_sam_preprocessor import VideoPromptDataPreprocessor
 
 from seg.models.necks.ramsam_neck import YOSONeck
 with read_base():
     from .._base_.default_runtime import *
-    from .._base_.datasets.coco_panoptic_video_lsj import *
+    from .._base_.datasets.coco_panoptic_lsj import *
     from .._base_.schedules.schedule_12e import *
 
 backend_args = None
@@ -44,7 +42,7 @@ data_preprocessor = dict(
     mean=[123.675, 116.28, 103.53],
     std=[58.395, 57.12, 57.375],
     bgr_to_rgb=True,
-    pad_size_divisor=32,
+    pad_size_divisor=1,
     pad_mask=True,
     mask_pad_value=0,
     pad_seg=True,
@@ -103,29 +101,18 @@ model = dict(
         norm_eval=False,
         init_cfg=dict(type='Pretrained', checkpoint='open-mmlab://regnetx_12gf')
     ),
-    # 创新点3：去掉YOLO Neck
     neck=dict(
-        type='FPN',
-        in_channels=[224, 448, 896, 2240],
-        out_channels=256,
-        num_outs=4,
-        start_level=0,
-        end_level=-1,
-        add_extra_convs='on_output',
-        relu_before_extra_convs=True
+        type=YOSONeck,
+        agg_dim=128,
+        hidden_dim=256,
+        backbone_shape=[224, 448, 896, 2240],
     ),
-    # neck=dict(
-    #     type=YOSONeck,
-    #     agg_dim=128,
-    #     hidden_dim=256,
-    #     backbone_shape=[224, 448, 896, 2240],
-    # ),
     panoptic_head=dict(
         type=RapSAMVideoHead,
-        prompt_with_kernel_updator=True,
+        prompt_with_kernel_updator=False,
         panoptic_with_kernel_updator=True,  
-        use_adaptor=True,
-        use_kernel_updator=True,
+        use_adaptor=False,
+        use_kernel_updator=False,
         use_self_attn=False,
         sphere_cls=True,
         ov_classifier_name='convnext_large_d_320_CocoPanopticOVDataset',
@@ -210,37 +197,31 @@ param_scheduler = [
     )
 ]
 
-train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=24, val_interval=1)
+train_cfg = dict(type='EpochBasedTrainLoop', max_epochs=12, val_interval=1)
 
 default_hooks = dict(
-    # checkpoint=dict(
-    #     type='mmengine.hooks.CheckpointHook', 
-    #     interval=1, 
-    #     max_keep_ckpts=3,
-    #     save_best='coco_panoptic/PQ',
-    #     rule='greater',
-    #     save_last=True
-    # ),
-    # early_stopping=dict(
-    #     type='mmengine.hooks.EarlyStoppingHook',
-    #     monitor='coco_panoptic/PQ',
-    #     patience=20,
-    #     min_delta=0.001,
-    #     rule='greater'
-    # ),
+    checkpoint=dict(
+        type='mmengine.hooks.CheckpointHook', 
+        interval=1, 
+        max_keep_ckpts=3,
+        save_best='coco_panoptic/PQ',
+        rule='greater',
+        save_last=True
+    ),
+    early_stopping=dict(
+        type='mmengine.hooks.EarlyStoppingHook',
+        monitor='coco_panoptic/PQ',
+        patience=20,
+        min_delta=0.001,
+        rule='greater'
+    ),
     logger=dict(type='mmengine.hooks.LoggerHook', interval=50),
     param_scheduler=dict(type='mmengine.hooks.ParamSchedulerHook'),
     sampler_seed=dict(type='mmengine.hooks.DistSamplerSeedHook'),
     timer=dict(type='mmengine.hooks.IterTimerHook'),
     visualization=dict(type='mmdet.engine.hooks.DetVisualizationHook')
 )
-# val_dataloader=None
-# val_evaluator=None
-# val_cfg=None
 
 auto_scale_lr = dict(base_batch_size=1, enable=False)
-find_unused_parameters = False
+find_unused_parameters = True
 
-# test_dataloader=None
-# test_evaluator=None
-# test_cfg=None
