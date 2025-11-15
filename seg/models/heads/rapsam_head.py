@@ -95,10 +95,10 @@ class RapSAMVideoHead(Mask2FormerVideoHead):
 
         if use_adaptor:
             # cross_attn_cfg = dict(embed_dims=256, batch_first=True, num_heads=8)
-            cross_attn_cfg = dict(embed_dims=feat_channels, batch_first=True, num_heads=8)
+            cross_attn_cfg = dict(embed_dims=256, batch_first=True, num_heads=8)
             if self.panoptic_with_kernel_updator:
                 self.panoptic_attn = KernelUpdator(
-                    in_channels=feat_channels, feat_channels=feat_channels, out_channels=feat_channels)
+                    feat_channels=256)
                 self.panoptic_norm = nn.Identity()
                 if sphere_cls:
                     cls_embed_dim = self.mask_heads[0].fc_cls.size(0)
@@ -110,7 +110,7 @@ class RapSAMVideoHead(Mask2FormerVideoHead):
                     self.panoptic_cls = nn.Linear(feat_channels, self.num_classes+1)
             else:
                 self.panoptic_attn = MultiheadAttention(**cross_attn_cfg)
-                self.panoptic_norm = nn.LayerNorm(feat_channels)
+                self.panoptic_norm = nn.LayerNorm(256)
                 if sphere_cls:
                     cls_embed_dim = self.mask_heads[0].fc_cls.size(0)
                     self.panoptic_cls = nn.Sequential(
@@ -121,14 +121,13 @@ class RapSAMVideoHead(Mask2FormerVideoHead):
                     self.panoptic_cls = nn.Linear(feat_channels, self.num_classes+1)
             
             if self.prompt_with_kernel_updator:
-                self.prompt_attn = KernelUpdator(
-                    in_channels=feat_channels, feat_channels=feat_channels, out_channels=feat_channels)
+                self.prompt_attn = KernelUpdator(feat_channels=256)
                 self.prompt_norm = nn.Identity()
-                self.prompt_iou = nn.Linear(feat_channels, 1)
+                self.prompt_iou = nn.Linear(256, 1)
             else:
                 self.prompt_attn = MultiheadAttention(**cross_attn_cfg)
-                self.prompt_norm = nn.LayerNorm(feat_channels)
-                self.prompt_iou = nn.Linear(feat_channels, 1)
+                self.prompt_norm = nn.LayerNorm(256)
+                self.prompt_iou = nn.Linear(256, 1)
 
         self.test_cfg = test_cfg
         self.train_cfg = train_cfg
@@ -145,11 +144,6 @@ class RapSAMVideoHead(Mask2FormerVideoHead):
         self.loss_cls = MODELS.build(loss_cls)
         self.loss_mask = MODELS.build(loss_mask)
         self.loss_dice = MODELS.build(loss_dice)
-        
-        # Add prompt_training attribute
-        self.prompt_training = kwargs.get('prompt_training', False)
-        
-
     def init_weights(self) -> None:
         pass
     
